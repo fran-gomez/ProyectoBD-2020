@@ -3,6 +3,7 @@ USE parquimetros;
 
 /* TODO:
         Restricciones de campo en casi todas las tablas
+        Crear la vista
  */
 
 CREATE TABLE Conductores (
@@ -149,6 +150,7 @@ GRANT SELECT ON parquimetros.Inspectores TO inspector@'%';
 GRANT SELECT, UPDATE, INSERT ON parquimetros.Parquimetros TO inspector@'%';
 GRANT INSERT ON parquimetros.Multas TO inspector@'%';
 
-/*CREATE VIEW Estacionados AS Estacionamientos;
+CREATE VIEW Estacionados AS 
+    SELECT calle,altura FROM Ubicaciones;
 
-GRANT SELECT ON Estacionados TO inspector@'%';*/
+GRANT SELECT ON Estacionados TO inspector@'%';
