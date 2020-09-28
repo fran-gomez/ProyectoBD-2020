@@ -1,7 +1,11 @@
 CREATE DATABASE parquimetros;
 USE parquimetros;
 
-CREATE TABLE conductores (
+/* TODO:
+        Restricciones de campo en casi todas las tablas
+ */
+
+CREATE TABLE Conductores (
     dni INT UNSIGNED,
     nombre VARCHAR(30) NOT NULL,
     apellido VARCHAR(30) NOT NULL,
@@ -20,7 +24,7 @@ CREATE TABLE Automoviles (
     dni INT UNSIGNED,
 
     PRIMARY KEY (patente),
-    FOREIGN KEY (dni) REFERENCES conductores(dni)
+    FOREIGN KEY (dni) REFERENCES Conductores(dni)
 );
 
 CREATE TABLE Tipos_tarjeta (
@@ -104,7 +108,7 @@ CREATE TABLE Asociado_con (
     FOREIGN KEY (calle,altura) REFERENCES Ubicaciones(calle,altura)
 );
 
-CREATE TABLE Multa (
+CREATE TABLE Multas (
     numero INT UNSIGNED,
     fecha DATE,
     hora TIME,
@@ -143,8 +147,8 @@ FLUSH PRIVILEGES;
 CREATE USER inspector@'%' IDENTIFIED BY 'inspector';
 GRANT SELECT ON parquimetros.Inspectores TO inspector@'%';
 GRANT SELECT, UPDATE, INSERT ON parquimetros.Parquimetros TO inspector@'%';
-GRANT INSERT ON parquimetros.Multa TO inspector@'%';
+GRANT INSERT ON parquimetros.Multas TO inspector@'%';
 
-CREATE VIEW Estacionados AS Estacionamientos;
+/*CREATE VIEW Estacionados AS Estacionamientos;
 
-GRANT SELECT ON Estacionados TO inspector@'%';
+GRANT SELECT ON Estacionados TO inspector@'%';*/
