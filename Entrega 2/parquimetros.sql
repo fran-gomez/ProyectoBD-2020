@@ -6,75 +6,76 @@ USE parquimetros;
         Crear la vista
  */
 
-CREATE TABLE Conductores (
+CREATE TABLE conductores (
     dni INT UNSIGNED,
     nombre VARCHAR(30) NOT NULL,
     apellido VARCHAR(30) NOT NULL,
     direccion VARCHAR(30) NOT NULL,
-    telefono VARCHAR(30) NOT NULL,
+    telefono VARCHAR(30),
     registro INT UNSIGNED NOT NULL,
 
     PRIMARY KEY (dni)
 );
 
-CREATE TABLE Automoviles (
+CREATE TABLE automoviles (
     patente CHAR(6),
     marca VARCHAR(30) NOT NULL,
     modelo VARCHAR(30) NOT NULL,
     color VARCHAR(30) NOT NULL,
-    dni INT UNSIGNED,
+    dni INT UNSIGNED NOT NULL,
 
     PRIMARY KEY (patente),
-    FOREIGN KEY (dni) REFERENCES Conductores(dni)
+    FOREIGN KEY (dni) REFERENCES conductores(dni)
 );
 
-CREATE TABLE Tipos_tarjeta (
+CREATE TABLE tipos_tarjeta (
     tipo VARCHAR(30),
-    descuento DECIMAL(3,2),
+    descuento DECIMAL(3,2) UNSIGNED NOT NULL,
 
     PRIMARY KEY (tipo)
 );
 
-CREATE TABLE Tarjeta (
-    id_tarjeta INT UNSIGNED,
+CREATE TABLE tarjetas (
+    id_tarjeta INT UNSIGNED AUTO_INCREMENT,
     saldo DECIMAL(5,2) NOT NULL,
     tipo VARCHAR(30) NOT NULL,
-    patente CHAR(6),
+    patente CHAR(6) NOT NULL,
 
     PRIMARY KEY (id_tarjeta),
-    FOREIGN KEY (patente) REFERENCES Automoviles(patente)
+    FOREIGN KEY (patente) REFERENCES automoviles(patente),
+    FOREIGN KEY (tipo) REFERENCES tipos_tarjeta(tipo)
 );
 
-CREATE TABLE Inspectores (
-    legajo INT,
-    dni INT,
-    nombre VARCHAR(30),
-    apellido VARCHAR(30),
-    password VARCHAR(32),
+CREATE TABLE inspectores (
+    legajo INT UNSIGNED,
+    dni INT UNSIGNED NOT NULL,
+    nombre VARCHAR(30) NOT NULL,
+    apellido VARCHAR(30) NOT NULL,
+    password VARCHAR(32) NOT NULL,
 
     PRIMARY KEY (legajo)
 );
 
-CREATE TABLE Ubicaciones (
+CREATE TABLE ubicaciones (
     calle VARCHAR(30),
-    altura VARCHAR(30),
-    tarifa DECIMAL(5,2),
+    altura INT UNSIGNED, 
+    tarifa DECIMAL(5,2) UNSIGNED NOT NULL,
 
     PRIMARY KEY (calle,altura)
 );
 
-CREATE TABLE Parquimetros (
+CREATE TABLE parquimetros (
     id_parq INT UNSIGNED,
-    numero INT UNSIGNED,
-    calle VARCHAR(30),
-    altura VARCHAR(30),
+    numero INT UNSIGNED NOT NULL,
+    calle VARCHAR(30) NOT NULL,
+    altura INT UNSIGNED NOT NULL,
 
     PRIMARY KEY (id_parq),
-    FOREIGN KEY (calle,altura) REFERENCES Ubicaciones(calle,altura)
+    FOREIGN KEY (calle,altura) REFERENCES ubicaciones(calle,altura)
 );
 
-CREATE TABLE Estacionamientos (
-    id_tarjeta INT UNSIGNED,
+CREATE TABLE estacionamientos (
+    id_tarjeta INT UNSIGNED NOT NULL,
     id_parq INT UNSIGNED,
     fecha_ent DATE,
     hora_ent TIME,
@@ -82,43 +83,44 @@ CREATE TABLE Estacionamientos (
     hora_sal TIME,
 
     PRIMARY KEY (id_parq,fecha_ent,hora_ent),
-    FOREIGN KEY (id_tarjeta) REFERENCES Tarjeta(id_tarjeta),
-    FOREIGN KEY (id_parq) REFERENCES Parquimetros(id_parq)
+    FOREIGN KEY (id_tarjeta) REFERENCES tarjetas(id_tarjeta),
+    FOREIGN KEY (id_parq) REFERENCES parquimetros(id_parq)
 );
 
-CREATE TABLE Accede (
-    legajo INT,
-    id_parq INT,
+CREATE TABLE accede (
+    legajo INT UNSIGNED NOT NULL,
+    id_parq INT UNSIGNED NOT NULL,
     fecha DATE,
     hora TIME,
 
     PRIMARY KEY (id_parq,fecha,hora),
-    FOREIGN KEY (legajo) REFERENCES Inspectores(legajo)
+    FOREIGN KEY (id_parq) REFERENCES parquimetros(id_parq),
+    FOREIGN KEY (legajo) REFERENCES inspectores(legajo)
 );
 
-CREATE TABLE Asociado_con (
-    id_asociado_con INT,
-    legajo INT,
-    calle VARCHAR(30),
-    altura VARCHAR(30),
-    dia ENUM('do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sa'),
-    turno ENUM('M', 'T'),
+CREATE TABLE asociado_con (
+    id_asociado_con INT UNSIGNED AUTO_INCREMENT,
+    legajo INT UNSIGNED NOT NULL,
+    calle VARCHAR(30) NOT NULL,
+    altura INT UNSIGNED NOT NULL,
+    dia ENUM('do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sa') NOT NULL,
+    turno ENUM('M', 'T') NOT NULL,
 
     PRIMARY KEY (id_asociado_con),
-    FOREIGN KEY (legajo) REFERENCES Inspectores(legajo),
-    FOREIGN KEY (calle,altura) REFERENCES Ubicaciones(calle,altura)
+    FOREIGN KEY (legajo) REFERENCES inspectores(legajo),
+    FOREIGN KEY (calle,altura) REFERENCES ubicaciones(calle,altura)
 );
 
-CREATE TABLE Multas (
-    numero INT UNSIGNED,
-    fecha DATE,
-    hora TIME,
-    patente CHAR(6),
-    id_asociado_con INT,
+CREATE TABLE multa (
+    numero INT UNSIGNED AUTO_INCREMENT,
+    fecha DATE NOT NULL,
+    hora TIME NOT NULL,
+    patente CHAR(6) NOT NULL,
+    id_asociado_con INT UNSIGNED NOT NULL,
 
     PRIMARY KEY (numero),
-    FOREIGN KEY (patente) REFERENCES Automoviles(patente),
-    FOREIGN KEY (id_asociado_con) REFERENCES Asociado_con(id_asociado_con)
+    FOREIGN KEY (patente) REFERENCES automoviles(patente),
+    FOREIGN KEY (id_asociado_con) REFERENCES asociado_con(id_asociado_con)
 );
 
 /* El usuario admin es un usuario local, con permisos
@@ -134,11 +136,11 @@ GRANT ALL PRIVILEGES ON parquimetros.* TO admin@localhost;
 DROP USER venta@'%';
 FLUSH PRIVILEGES;
 CREATE USER venta@'%' IDENTIFIED BY 'venta';
-GRANT INSERT ON parquimetros.Tarjeta TO venta@'%';
+GRANT INSERT ON parquimetros.tarjetas TO venta@'%';
 
 /* El usuario inspector es un usuario remoto que puede 
    validarel numero y legajo de otro inspector, cargar
-   multas, registrarel acceso a los parquimetros y 
+   multa, registrarel acceso a los parquimetros y 
    consultar las patentes de los autos registrados en 
    un dado parquimetro.
    El view Estacionados se encarga de modelar los datos
@@ -146,11 +148,11 @@ GRANT INSERT ON parquimetros.Tarjeta TO venta@'%';
 DROP USER inspector@'%';
 FLUSH PRIVILEGES;
 CREATE USER inspector@'%' IDENTIFIED BY 'inspector';
-GRANT SELECT ON parquimetros.Inspectores TO inspector@'%';
-GRANT SELECT, UPDATE, INSERT ON parquimetros.Parquimetros TO inspector@'%';
-GRANT INSERT ON parquimetros.Multas TO inspector@'%';
+GRANT SELECT ON parquimetros.inspectores TO inspector@'%';
+GRANT SELECT, UPDATE, INSERT ON parquimetros.parquimetros TO inspector@'%';
+GRANT INSERT ON parquimetros.multa TO inspector@'%';
 
 CREATE VIEW Estacionados AS 
-    SELECT calle,altura FROM Ubicaciones;
+    SELECT calle,altura FROM ubicaciones;
 
 GRANT SELECT ON Estacionados TO inspector@'%';
