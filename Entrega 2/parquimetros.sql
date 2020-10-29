@@ -189,13 +189,14 @@ DROP USER venta@'%';
 FLUSH PRIVILEGES;
 CREATE USER venta@'%' IDENTIFIED BY 'venta';
 GRANT INSERT ON parquimetros.tarjetas TO venta@'%';
+GRANT SELECT ON parquimetros.tipos_tarjeta TO venta@'%';
 
 # Crea la vista de estacionados
 
 CREATE VIEW estacionados AS 
     SELECT calle, altura, patente
     FROM (parquimetros.parquimetros NATURAL JOIN estacionamientos NATURAL JOIN tarjetas)
-    WHERE fecha_sal = NULL and hora_sal = NULL;
+    WHERE fecha_sal IS NULL and hora_sal IS NULL;
 
 # El usuario inspector es un usuario remoto que puede 
 # validar el numero y legajo de otro inspector, cargar
@@ -212,3 +213,5 @@ GRANT SELECT ON parquimetros.inspectores TO inspector@'%';
 GRANT SELECT, UPDATE, INSERT ON parquimetros.parquimetros TO inspector@'%';
 GRANT INSERT ON parquimetros.multa TO inspector@'%';
 GRANT SELECT ON estacionados TO inspector@'%';
+GRANT SELECT ON parquimetros.asociado_con TO inspector@'%';
+GRANT INSERT ON parquimetros.accede TO inspector@'%';

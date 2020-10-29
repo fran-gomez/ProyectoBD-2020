@@ -1,10 +1,5 @@
 USE parquimetros;
 
-/* TODO:
-        Agregar los tipos de tarjeta 
-        Mejorar los tiempos en los campos
-*/
-
 /* Insercion de conductores */
 INSERT INTO Conductores(dni,nombre,apellido,direccion,telefono,registro)
 VALUES (12345678,'Philip J.','Fry','Departamento 10100100','87654321',1);
