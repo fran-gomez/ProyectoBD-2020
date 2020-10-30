@@ -5,7 +5,6 @@ import quick.dbtable.DBTable;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.plaf.nimbus.State;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -13,6 +12,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.sql.*;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -124,6 +124,7 @@ public class InspectorView extends JPanel {
             JOptionPane.showMessageDialog(new JFrame("Error"), "Por favor, ingrese las patentes de los autos " +
                     "estacionados en su ubicacion", "BD-2020", JOptionPane.ERROR_MESSAGE);
         } else {
+            Set<String> patentesValidas = new HashSet<>();
             Set<String> patentesParquimetro = new HashSet<>();
             Set<String> patentesInspector = new HashSet<>();
 
@@ -139,10 +140,20 @@ public class InspectorView extends JPanel {
             // Si consideramos a las patentes cuya tarjeta esta asociada al parquimetro como un conjunto
             // y a las patentes que el inspector ingresa a mano, para saber que patentes no estan relacionadas
             // con un parquimetr basta con calcular la diferencia entre ambos conjuntos
+
+            // Se crea un conjunto de patentes validas (Patentes cuyos automoviles estan en la bd)
+            // Luego, se crea el conjunto de patentes que el inspector ingreso a mano, y se eliminan
+            // todas las que tengan una tarjeta asociada al parquimetro.
+            // Finalmente, se intersectan los conjuntos de patentes validas con las patentes que no
+            // pagaron en el parquimetro, para evitar el error de las patentes inexistentes en la bd
+            patentesValidas.addAll(obtenerPatentesValidas());
             while (rs.next())
                 patentesParquimetro.add(rs.getString("patente"));
+
             patentesInspector.addAll(Arrays.asList(patentesUbicacion.getText().split(",")));
             patentesInspector.removeAll(patentesParquimetro);
+
+            patentesInspector.retainAll(patentesValidas);
 
             String calle = ubicaciones.getSelectedValue().split(",")[0];
             String altura = ubicaciones.getSelectedValue().split(",")[1];
@@ -157,6 +168,23 @@ public class InspectorView extends JPanel {
             rs.close();
         }
         // SELECT patente FROM (automoviles NATURAL JOIN tarjetas NATURAL JOIN estacionamientos NATURAL JOIN parquimetros) WHERE id_parq= AND id_tarjeta=estacionamientos.id_tarjeta
+    }
+
+    private Collection<? extends String> obtenerPatentesValidas() throws SQLException {
+
+        Set<String> patentes;
+        Statement s = conexion.createStatement();
+        String sql = "SELECT patente FROM automoviles";
+        ResultSet rs = s.executeQuery(sql);
+
+        patentes = new HashSet<>();
+        while (rs.next())
+            patentes.add(rs.getString("patente"));
+
+        s.close();
+        rs.close();
+
+        return patentes;
     }
 
     private void actualizarDTable(DBTable multasGeneradas) throws SQLException {
@@ -182,15 +210,16 @@ public class InspectorView extends JPanel {
         rs.close();
     }
 
-    // TODO: Si la patente no existe en la BD, se rompe todo. ¿Deberia pasar eso? Yo creo que no...
     private void labrarMulta(String patente, String id_asociado_con) throws SQLException {
-        Statement s = conexion.createStatement();
-        String sql = "INSERT INTO multa(fecha,hora,patente,id_asociado_con) " +
-                        "VALUES (CURDATE(),CURTIME(),'" + patente + "'," +
-                            id_asociado_con + ")";
-        s.executeUpdate(sql);
+        if (!id_asociado_con.equals("")) {
+            Statement s = conexion.createStatement();
+            String sql = "INSERT INTO multa(fecha,hora,patente,id_asociado_con) " +
+                    "VALUES (CURDATE(),CURTIME(),'" + patente + "'," +
+                    id_asociado_con + ")";
+            s.executeUpdate(sql);
 
-        s.close();
+            s.close();
+        }
     }
 
     private String obtenerIdAsocidadoCon(String legajo, String calle, String altura) throws SQLException {
@@ -204,8 +233,10 @@ public class InspectorView extends JPanel {
         while (rs.next())
             id_asociado_con = rs.getString("id_asociado_con");
 
-        if (id_asociado_con.equals(""))
-            System.exit(32);
+        // TODO: No se por que aca siempre termina... estara mal el query?
+        /*if (id_asociado_con.equals(""))
+            System.exit(32);*/
+
         s.close();
         rs.close();
 
