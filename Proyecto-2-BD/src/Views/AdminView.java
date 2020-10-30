@@ -2,12 +2,14 @@ package Views;
 import quick.dbtable.DBTable;
 
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.sql.*;
+import java.util.Arrays;
 
 public class AdminView extends JPanel {
 	private static final long serialVersionUID = 1L;
@@ -34,9 +36,12 @@ public class AdminView extends JPanel {
             modelo.setEditable(false);
 
             sentencias.addKeyListener(new EnterListener());
+            sentencias.setBorder(new LineBorder(Color.BLACK));
             tablas.addListSelectionListener(new SeleccionListener(this));
 
             this.setLayout(new BorderLayout());
+            ((BorderLayout) this.getLayout()).setHgap(3);
+            ((BorderLayout) this.getLayout()).setVgap(3);
             this.add(sentencias, BorderLayout.NORTH);
             this.add(modelo, BorderLayout.CENTER);
             this.add(new JScrollPane(tablas), BorderLayout.WEST);
@@ -50,20 +55,19 @@ public class AdminView extends JPanel {
     }
 
     private String[] obtenerTabla() throws SQLException{
-        String tablas[] = new String[15];
+        String tablas[] = new String[12];
         DatabaseMetaData db = conexion.getMetaData();
         ResultSet rs;
 
-        rs = db.getTables(null, null, "%", null);
+        rs = db.getTables(null, null, null, new String[] {"TABLE"});
         int k = 0;
-        while (rs.next()) {
-            tablas[k++] = rs.getString(3);
+        while (rs.next() && k < 12) {
+            tablas[k++] = rs.getString("TABLE_NAME");
         }
         rs.close();
 
-        return tablas;
+        return Arrays.copyOf(tablas, k);
     }
-
 
     private void ejecutarSentencia(String sent) {
         try {
@@ -114,7 +118,7 @@ public class AdminView extends JPanel {
         @Override
         public void valueChanged(ListSelectionEvent listSelectionEvent) {
             try {
-                int i = 1;
+                int i = 0;
                 String tabla = tablas.getSelectedValue();
                 String[] camposTabla;
                 Statement sentencia = conexion.createStatement();
@@ -126,7 +130,7 @@ public class AdminView extends JPanel {
                     i++;
                 }
                 campos.removeSelectionInterval(0, i - 1);
-                campos.setListData(camposTabla);
+                campos.setListData(Arrays.copyOf(camposTabla, i));
             } catch (SQLException e) {
                 e.printStackTrace();
             }

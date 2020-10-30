@@ -4,10 +4,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.SQLInvalidAuthorizationSpecException;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.security.MessageDigest;
+import java.sql.*;
+
+import static javax.swing.UIManager.getString;
 
 
 public class LoginView extends JPanel {
@@ -51,7 +53,7 @@ public class LoginView extends JPanel {
         add(labelBienvenide);
 
         labelUsername.setText("Nombre de usuario");
-        labelPassword.setText("Contraseña");
+        labelPassword.setText("Contraseï¿½a");
         labelUsername.setHorizontalAlignment(SwingConstants.CENTER);
         labelPassword.setHorizontalAlignment(SwingConstants.CENTER);
 
@@ -65,6 +67,15 @@ public class LoginView extends JPanel {
 
         password.setHorizontalAlignment(JTextField.CENTER);
         password.setPreferredSize(new Dimension(200,30));
+        password.addKeyListener(new KeyListener() {
+            public void keyTyped(KeyEvent keyEvent) {}
+            public void keyReleased(KeyEvent keyEvent) {}
+
+            public void keyPressed(KeyEvent keyEvent) {
+                if (keyEvent.getKeyChar() == '\n')
+                    login();
+            }
+        });
         jPanel1.add(labelPassword);
         jPanel1.add(password);
 
@@ -94,43 +105,102 @@ public class LoginView extends JPanel {
 
         login.setText("Iniciar sesion");
         login.addActionListener(new ActionListener() {
-            @Override
             public void actionPerformed(ActionEvent e) {
-                login(e);
+                login();
+            }
+        });
+        login.addKeyListener(new KeyListener() {
+            public void keyTyped(KeyEvent keyEvent) {}
+            public void keyReleased(KeyEvent keyEvent) {}
+
+            public void keyPressed(KeyEvent keyEvent) {
+                if (keyEvent.getKeyChar() == '\n')
+                    login();
             }
         });
         add(login);
     }
 
-    private void login(ActionEvent evt){
+    private void login(){
         String srv = "localhost:3306";
         String bd = "parquimetros";
         String uname = username.getText();
-        String psswd = "admin"; //
-        // String psswd = String.valueOf(password.getPassword().toString());
-        // TODO obtener el password del jpassword field que con la sentencia de arriba no se pudo.
-        // hay que codificarla con md5 para ingresar
+        String psswd = password.getText();
+        String url = "jdbc:mysql://" + srv + "/" + bd + "?serverTimezone=America/Argentina/Buenos_Aires";
         Connection conexion;
 
         try{
-            Class.forName("org.mariadb.jdbc.Driver");
-            if(uname.equals("admin")) {
-                conexion = DriverManager.getConnection("jdbc:mysql://" + srv + "/" + bd + "?serverTimezone=America/Argentina/Buenos_Aires", uname, psswd);
-                if(conexion != null){
-                    cleanUI();
-                    if(uname.equals("admin")){
-                        new AdminView(ventana, conexion);
-                    }
-                }
-            } //else es un chabon de los parquimetros
-        } catch (SQLInvalidAuthorizationSpecException e) {
-            JOptionPane.showMessageDialog(null, "Error en la contraseña de " + uname, "BD-2020", JOptionPane.ERROR_MESSAGE);
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            if (uname.equals("admin")) {
+                conexion = DriverManager.getConnection(url, uname, psswd);
+                cleanUI();
+                if(conexion != null)
+                    new AdminView(ventana, conexion);
+            } else if (esNumero(uname)) {
+                conexion = DriverManager.getConnection(url, "inspector", "inspector");
+                cleanUI();
+                if (loginInspector(uname, conexion, psswd))
+                    new InspectorView(ventana, conexion, uname);
+                else
+                    throw new SQLException();
+            }
+
         } catch (SQLException e){
-            System.out.println(e);
+            JOptionPane.showMessageDialog(new JFrame("Error"), "Error en la contraseï¿½a de " + uname, "BD-2020", JOptionPane.ERROR_MESSAGE);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
 
+    private boolean loginInspector(String uname, Connection conexion, String password) {
+        try {
+            Statement s = conexion.createStatement();
+            String sql = "SELECT legajo, password FROM inspectores WHERE legajo=" + uname;
+            ResultSet rs = s.executeQuery(sql);
+            String md5Passwd = "";
+
+            while (rs.next())
+                md5Passwd = rs.getString("password");
+
+            s.close();
+            rs.close();
+
+            return md5Passwd.equals(MD5.getMD5(password));
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+
+        return false;
+    }
+/*
+    private String MD5(String str, Connection c) {
+        String password = "";
+
+        try {
+            Statement s = c.createStatement();
+            String sql = "password=md5("+str+")";
+            ResultSet rs = s.executeQuery(sql);
+
+
+            while (rs.next())
+                password = rs.getString("password");
+
+            s.close();
+            rs.close();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } finally {
+            return password;
+        }
+    }
+*/
+    private boolean esNumero(String uname) {
+        try {
+            Integer.parseInt(uname);
+            return true;
+        } catch(NumberFormatException e){
+            return false;
+        }
     }
 
     private void cleanUI() {
