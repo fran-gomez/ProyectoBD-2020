@@ -40,7 +40,6 @@ public class InspectorView extends JPanel {
             ubicaciones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
             parquimetros = new JList<>();
-            parquimetros.addListSelectionListener(new SeleccionParquimetroListener());
             parquimetros.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
             multasGeneradas = new DBTable();
@@ -170,7 +169,7 @@ public class InspectorView extends JPanel {
         // SELECT patente FROM (automoviles NATURAL JOIN tarjetas NATURAL JOIN estacionamientos NATURAL JOIN parquimetros) WHERE id_parq= AND id_tarjeta=estacionamientos.id_tarjeta
     }
 
-    private Collection<? extends String> obtenerPatentesValidas() throws SQLException {
+    private Set<String> obtenerPatentesValidas() throws SQLException {
 
         Set<String> patentes;
         Statement s = conexion.createStatement();
@@ -233,22 +232,39 @@ public class InspectorView extends JPanel {
         while (rs.next())
             id_asociado_con = rs.getString("id_asociado_con");
 
-        // TODO: No se por que aca siempre termina... estara mal el query?
-        /*if (id_asociado_con.equals(""))
-            System.exit(32);*/
-
         s.close();
         rs.close();
 
         return id_asociado_con;
     }
 
+    private void registrarAcceso() {
+        try {
+            Statement s = conexion.createStatement();
+            String id_parq = parquimetros.getSelectedValue();
+            String sql = "INSERT INTO accede(legajo,id_parq,fecha,hora) " +
+                    "VALUES (" + legajo + "," + id_parq + ",CURDATE(),CURTIME())";
+
+            System.out.println(sql);
+            s.executeUpdate(sql);
+            s.close();
+
+            generarMultas.setEnabled(true);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+
     private class MultasClickListener implements MouseListener {
 
-        @Override
         public void mouseClicked(MouseEvent mouseEvent) {
             try {
-                verificarMultas();
+                if (parquimetros.getSelectedIndex() >= 0) {
+                    registrarAcceso();
+                    verificarMultas();
+                } else
+                    JOptionPane.showMessageDialog(new JFrame("Error"), "Primero debe seleccionar un parquimetro",
+                                                    "BD-2020", JOptionPane.ERROR_MESSAGE);
             } catch (SQLException throwables) {
                 throwables.printStackTrace();
             }
@@ -268,7 +284,12 @@ public class InspectorView extends JPanel {
         public void keyPressed(KeyEvent keyEvent) {
             if (keyEvent.getKeyChar() == '\n') {
                 try {
-                    verificarMultas();
+                    if (parquimetros.getSelectedIndex() >= 0) {
+                        registrarAcceso();
+                        verificarMultas();
+                    } else
+                        JOptionPane.showMessageDialog(new JFrame("Error"), "Primero debe seleccionar un parquimetro",
+                                "BD-2020", JOptionPane.ERROR_MESSAGE);
                 } catch (SQLException throwables) {
                     throwables.printStackTrace();
                 }
@@ -309,21 +330,4 @@ public class InspectorView extends JPanel {
         }
     }
 
-    private class SeleccionParquimetroListener implements ListSelectionListener {
-
-        public void valueChanged(ListSelectionEvent listSelectionEvent) {
-            try {
-                Statement s = conexion.createStatement();
-                String id_parq = parquimetros.getSelectedValue();
-                String sql = "INSERT INTO accede(legajo,id_parq,fecha,hora) " +
-                                "VALUES (" + legajo + "," + id_parq + "CURDATE(),CURTIME())";
-                s.executeUpdate(sql);
-                s.close();
-
-                generarMultas.setEnabled(true);
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-            }
-        }
-    }
 }
