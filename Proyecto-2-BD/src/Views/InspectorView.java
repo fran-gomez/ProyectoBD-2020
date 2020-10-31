@@ -5,6 +5,8 @@ import quick.dbtable.DBTable;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.plaf.basic.BasicSplitPaneUI;
+import javax.swing.plaf.basic.BasicSplitPaneUI.BasicVerticalLayoutManager;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -12,7 +14,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.sql.*;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -20,7 +21,13 @@ public class InspectorView extends JPanel {
 
     protected Connection conexion;
     protected JFrame ventana;
+    protected JPanel panelOeste;
+    protected JPanel panelCentral;
+    protected JPanel panelEste;
+
+
     protected String legajo;
+    protected JLabel tituloUnidad;
 
     protected JTextField patentesUbicacion;
     protected JList<String> ubicaciones, parquimetros;
@@ -33,65 +40,71 @@ public class InspectorView extends JPanel {
             this.conexion = conexion;
             this.legajo = legajo;
 
-            patentesUbicacion = new JTextField();
+            this.setLayout(new BorderLayout());
+            ((BorderLayout) this.getLayout()).setHgap(3);
+            ((BorderLayout) this.getLayout()).setVgap(3);
+
+            panelOeste = new JPanel();
+            panelCentral = new JPanel();
+            panelEste = new JPanel();
+
+            GroupLayout oeste = new GroupLayout(panelOeste);
+            panelOeste.setLayout(oeste);
+            GroupLayout este = new GroupLayout(panelEste);
+            panelEste.setLayout(este);
+
+            // Norte
+            tituloUnidad = new JLabel("Bienvenide, " + legajo);
+
+            // Oeste
+            panelOeste.setLayout(new BoxLayout(panelOeste, BoxLayout.Y_AXIS));
+            //panelOeste.setPreferredSize(new Dimension(200,400));
 
             ubicaciones = new JList<>(obtenerUbicaciones(conexion));
             ubicaciones.addListSelectionListener(new SeleccionListener(this));
             ubicaciones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+            panelOeste.add(new JScrollPane(ubicaciones));
+
+            // Centro
+
+            panelCentral.setLayout(new BoxLayout(panelCentral, BoxLayout.Y_AXIS));
+            //panelCentral.setPreferredSize(new Dimension(200,400));
+
             parquimetros = new JList<>();
             parquimetros.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-            multasGeneradas = new DBTable();
-            multasGeneradas.setConnection(conexion);
-            multasGeneradas.setEditable(false);
+            panelCentral.add(new JScrollPane(parquimetros));
+
+            // Este
+            panelEste.setLayout(new BoxLayout(panelEste, BoxLayout.Y_AXIS));
+            //panelEste.setPreferredSize(new Dimension(200,400));
+
+            patentesUbicacion = new JTextField();
 
             generarMultas = new JButton("Generar multas");
             generarMultas.addKeyListener(new MultasEnterListener());
             generarMultas.addMouseListener(new MultasClickListener());
 
-            this.setLayout(new GridBagLayout());
+            panelEste.add(patentesUbicacion);
+            panelEste.add(generarMultas);
 
-            GridBagConstraints c = new GridBagConstraints();
-            c.fill = GridBagConstraints.BOTH;
-            c.weightx = 1.0;
+            // Sur
+            multasGeneradas = new DBTable();
+            multasGeneradas.setConnection(conexion);
+            multasGeneradas.setEditable(false);
 
-            c.gridx = 0;
-            c.gridy = 0;
-            c.gridwidth = 4;
-            c.gridheight = 2;
-            this.add(patentesUbicacion, c);
+            this.add(tituloUnidad,BorderLayout.NORTH);
+            this.add(panelOeste, BorderLayout.WEST);
+            this.add(panelCentral, BorderLayout.CENTER);
+            this.add(panelEste, BorderLayout.EAST);
 
-            c.gridx = 0;
-            c.gridy = 2;
-            c.gridheight = 2;
-            c.gridwidth = 1;
-            this.add(ubicaciones, c);
-
-            c.gridx = 1;
-            c.gridy = 2;
-            c.gridheight = 2;
-            c.gridheight = 1;
-            this.add(parquimetros, c);
-
-            c.gridx = 2;
-            c.gridy = 2;
-            c.gridheight = 1;
-            c.gridwidth = 2;
-            c.weighty = 1.0;
-            this.add(multasGeneradas, c);
-
-            c.gridx = 3;
-            c.gridy = 3;
-            c.gridheight = 1;
-            c.gridwidth = 1;
-            c.weightx = 0;
-            c.weighty = 0;
-            this.add(generarMultas, c);
+            multasGeneradas.setPreferredSize(new Dimension(400,200));
+            this.add(multasGeneradas, BorderLayout.SOUTH);
 
             ventana.getContentPane().add(this);
 
-            JOptionPane.showMessageDialog(new JFrame("Error"), "Por favor, ingrese las patentes de los autos " +
+            JOptionPane.showMessageDialog(new JFrame("Informacion"), "Por favor, ingrese las patentes de los autos " +
                     "estacionados en su ubicacion separadas por una ,", "BD-2020", JOptionPane.INFORMATION_MESSAGE);
 
         } catch (SQLException throwables) {

@@ -6,24 +6,21 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.security.MessageDigest;
 import java.sql.*;
 
 import static javax.swing.UIManager.getString;
-
 
 public class LoginView extends JPanel {
     private static final long serialVersionUID = 1L;
 
     protected JFrame ventana;
-
+    private JPanel jPanel1;
+    private JPanel jPanel2;
+    
     private JButton login;
     private JLabel labelBienvenide;
     private JLabel labelUsername;
     private JLabel labelPassword;
-    private JPanel jPanel1;
-    private JPanel jPanel2;
-    private JPanel jPanel3;
     private JTextField username;
     private JPasswordField password;
 
@@ -35,7 +32,6 @@ public class LoginView extends JPanel {
 
         jPanel1 = new JPanel();
         jPanel2 = new JPanel();
-        jPanel3 = new JPanel();
 
         labelUsername = new JLabel();
         labelPassword = new JLabel();
@@ -44,6 +40,7 @@ public class LoginView extends JPanel {
 
         login = new JButton();
 
+        // Reposicionando las componentes graficas
         setPreferredSize(new java.awt.Dimension(400,400));
 
         labelBienvenide.setFont(new Font("Calibri",1,18));
@@ -52,8 +49,8 @@ public class LoginView extends JPanel {
         labelBienvenide.setPreferredSize(new Dimension(400,50));
         add(labelBienvenide);
 
-        labelUsername.setText("Nombre de usuario");
-        labelPassword.setText("Contrase�a");
+        labelUsername.setText("Usuario o Legajo");
+        labelPassword.setText("Password");
         labelUsername.setHorizontalAlignment(SwingConstants.CENTER);
         labelPassword.setHorizontalAlignment(SwingConstants.CENTER);
 
@@ -76,12 +73,13 @@ public class LoginView extends JPanel {
                     login();
             }
         });
+        
         jPanel1.add(labelPassword);
         jPanel1.add(password);
 
 
-        GroupLayout jPanel3Layout = new GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
+        GroupLayout jPanel3Layout = new GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
                 jPanel3Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addGap(0, 400, Short.MAX_VALUE)
@@ -101,7 +99,7 @@ public class LoginView extends JPanel {
                                         .addGap(0, 0, Short.MAX_VALUE)))
         );
 
-        add(jPanel3);
+        add(jPanel2);
 
         login.setText("Iniciar sesion");
         login.addActionListener(new ActionListener() {
@@ -125,28 +123,39 @@ public class LoginView extends JPanel {
         String srv = "localhost:3306";
         String bd = "parquimetros";
         String uname = username.getText();
+        // Tratamos varias tecnicas para obtener el texto almacenado en el JPasswordField pero solo pudimos solucionarlo con 
+        // getText aunque este en desuso. Sabemos de las implicaciones en fallas de seguridad pero utilizamos MD5 para esta salvedad.
         String psswd = password.getText();
         String url = "jdbc:mysql://" + srv + "/" + bd + "?serverTimezone=America/Argentina/Buenos_Aires";
         Connection conexion;
 
         try{
-            Class.forName("com.mysql.cj.jdbc.Driver");
+        	// Usamos ambos servicios de bases de datos, por lo que dejamos las clases adjuntas.
+            //Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName("org.mariadb.jdbc.Driver");
+
             if (uname.equals("admin")) {
                 conexion = DriverManager.getConnection(url, uname, psswd);
-                cleanUI();
-                if(conexion != null)
+                if(conexion != null){
                     new AdminView(ventana, conexion);
+                    cleanView();
+                }
             } else if (esNumero(uname)) {
                 conexion = DriverManager.getConnection(url, "inspector", "inspector");
-                cleanUI();
-                if (loginInspector(uname, conexion, psswd))
+                if (loginInspector(uname, conexion, psswd)){
                     new InspectorView(ventana, conexion, uname);
+                    cleanView();
+                }
                 else
                     throw new SQLException();
+            } else {
+                JOptionPane.showMessageDialog(new JFrame("Error"), "No se encontraron usuarios o inspectores");
+                resetFields();
             }
 
         } catch (SQLException e){
-            JOptionPane.showMessageDialog(new JFrame("Error"), "Error en la contrase�a de " + uname, "BD-2020", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(new JFrame("Error"), "Password incorrecto de " + uname, "BD-2020", JOptionPane.ERROR_MESSAGE);
+            resetFields();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -172,28 +181,7 @@ public class LoginView extends JPanel {
 
         return false;
     }
-/*
-    private String MD5(String str, Connection c) {
-        String password = "";
 
-        try {
-            Statement s = c.createStatement();
-            String sql = "password=md5("+str+")";
-            ResultSet rs = s.executeQuery(sql);
-
-
-            while (rs.next())
-                password = rs.getString("password");
-
-            s.close();
-            rs.close();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        } finally {
-            return password;
-        }
-    }
-*/
     private boolean esNumero(String uname) {
         try {
             Integer.parseInt(uname);
@@ -203,12 +191,16 @@ public class LoginView extends JPanel {
         }
     }
 
-    private void cleanUI() {
+    private void cleanView(){
         username.setVisible(false);
         password.setVisible(false);
         login.setVisible(false);
         labelPassword.setVisible(false);
         labelUsername.setVisible(false);
+    }
+    private void resetFields() {
+        username.setText("");
+        password.setText("");
     }
 
 }

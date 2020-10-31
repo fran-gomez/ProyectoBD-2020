@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="EclipseModuleManager">
-    <libelement value="file://C:/Users/bruco/Downloads/ejemplo java-MySQL/mysql-connector-java-8.0.21.jar" />
-    <libelement value="file://C:/Users/bruco/Downloads/ejemplo java-MySQL/quicktable-3.0.jar" />
-    <libelement value="file://C:/Users/bruco/Downloads/mariadb-java-client-2.6.0.jar" />
+    <libelement value="file://$USER_HOME$/Downloads/ejemplo java-MySQL/mysql-connector-java-8.0.21.jar" />
+    <libelement value="file://$USER_HOME$/Downloads/ejemplo java-MySQL/quicktable-3.0.jar" />
+    <libelement value="file://$USER_HOME$/Downloads/mariadb-java-client-2.6.0.jar" />
     <src_description expected_position="0">
       <src_folder value="file://$MODULE_DIR$/src" expected_position="0" />
     </src_description>
@@ -19,7 +19,7 @@
     <orderEntry type="module-library">
       <library name="mysql-connector-java-8.0.21.jar">
         <CLASSES>
-          <root url="file://C:/Users/bruco/Downloads/ejemplo java-MySQL/mysql-connector-java-8.0.21.jar" />
+          <root url="file://$USER_HOME$/Downloads/ejemplo java-MySQL/mysql-connector-java-8.0.21.jar" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -28,7 +28,7 @@
     <orderEntry type="module-library">
       <library name="quicktable-3.0.jar">
         <CLASSES>
-          <root url="file://C:/Users/bruco/Downloads/ejemplo java-MySQL/quicktable-3.0.jar" />
+          <root url="file://$USER_HOME$/Downloads/ejemplo java-MySQL/quicktable-3.0.jar" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -37,13 +37,12 @@
     <orderEntry type="module-library">
       <library name="mariadb-java-client-2.6.0.jar">
         <CLASSES>
-          <root url="file://C:/Users/bruco/Downloads/mariadb-java-client-2.6.0.jar" />
+          <root url="file://$USER_HOME$/Downloads/mariadb-java-client-2.6.0.jar" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="mysql-connector-java-8.0.21" level="project" />
     <orderEntry type="library" name="quicktable-3.0" level="project" />
   </component>
 </module>
