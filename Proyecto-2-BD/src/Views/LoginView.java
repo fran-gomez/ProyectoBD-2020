@@ -131,8 +131,8 @@ public class LoginView extends JPanel {
 
         try{
         	// Usamos ambos servicios de bases de datos, por lo que dejamos las clases adjuntas.
-            //Class.forName("com.mysql.cj.jdbc.Driver");
-            Class.forName("org.mariadb.jdbc.Driver");
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            //Class.forName("org.mariadb.jdbc.Driver");
 
             if (uname.equals("admin")) {
                 conexion = DriverManager.getConnection(url, uname, psswd);

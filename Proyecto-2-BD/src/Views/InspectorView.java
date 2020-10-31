@@ -5,8 +5,6 @@ import quick.dbtable.DBTable;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.plaf.basic.BasicSplitPaneUI;
-import javax.swing.plaf.basic.BasicSplitPaneUI.BasicVerticalLayoutManager;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -130,7 +128,7 @@ public class InspectorView extends JPanel {
         return Arrays.copyOf(ubicaciones, i);
     }
 
-    private void verificarMultas() throws SQLException {
+    private void verificarPatentes() throws SQLException {
 
         if (patentesUbicacion.getText().equals("")) {
             JOptionPane.showMessageDialog(new JFrame("Error"), "Por favor, ingrese las patentes de los autos " +
@@ -170,12 +168,17 @@ public class InspectorView extends JPanel {
             String calle = ubicaciones.getSelectedValue().split(",")[0];
             String altura = ubicaciones.getSelectedValue().split(",")[1];
             id_asociado_con = obtenerIdAsocidadoCon(legajo, calle, altura);
-            // Para cada patente en el conjunto diferencia, se labra una multa
-            for (String patente: patentesInspector)
-                labrarMulta(patente, id_asociado_con);
 
-            actualizarDTable(multasGeneradas);
+            if (id_asociado_con.equals(""))
+                JOptionPane.showMessageDialog(new JFrame("Error"), "Error. El inspector " + legajo +
+                            " no esta autorizado a labrar multas en " + ubicaciones.getSelectedValue(), "BD-2020", JOptionPane.ERROR_MESSAGE);
+            else {
+                // Para cada patente en el conjunto diferencia, se labra una multa
+                for (String patente : patentesInspector)
+                    labrarMulta(patente, id_asociado_con);
 
+                actualizarDTable(multasGeneradas);
+            }
             s.close();
             rs.close();
         }
@@ -201,7 +204,9 @@ public class InspectorView extends JPanel {
 
     private void actualizarDTable(DBTable multasGeneradas) throws SQLException {
         Statement s = conexion.createStatement();
-        String sql = "SELECT * FROM multa WHERE fecha >= CURDATE() AND hora <= CURTIME()";
+        String sql = "SELECT numero, fecha, hora, calle, altura, patente, legajo FROM " +
+                        "(multa NATURAL JOIN asociado_con) WHERE fecha >= CURDATE() AND hora <= CURTIME() AND legajo=" +
+                        legajo;
         ResultSet rs = s.executeQuery(sql);
 
         multasGeneradas.setSelectSql(sql);
@@ -223,15 +228,13 @@ public class InspectorView extends JPanel {
     }
 
     private void labrarMulta(String patente, String id_asociado_con) throws SQLException {
-        if (!id_asociado_con.equals("")) {
-            Statement s = conexion.createStatement();
-            String sql = "INSERT INTO multa(fecha,hora,patente,id_asociado_con) " +
-                    "VALUES (CURDATE(),CURTIME(),'" + patente + "'," +
-                    id_asociado_con + ")";
-            s.executeUpdate(sql);
+        Statement s = conexion.createStatement();
+        String sql = "INSERT INTO multa(fecha,hora,patente,id_asociado_con) " +
+                "VALUES (CURDATE(),CURTIME(),'" + patente + "'," +
+                id_asociado_con + ")";
+        s.executeUpdate(sql);
 
-            s.close();
-        }
+        s.close();
     }
 
     private String obtenerIdAsocidadoCon(String legajo, String calle, String altura) throws SQLException {
@@ -274,7 +277,7 @@ public class InspectorView extends JPanel {
             try {
                 if (parquimetros.getSelectedIndex() >= 0) {
                     registrarAcceso();
-                    verificarMultas();
+                    verificarPatentes();
                 } else
                     JOptionPane.showMessageDialog(new JFrame("Error"), "Primero debe seleccionar un parquimetro",
                                                     "BD-2020", JOptionPane.ERROR_MESSAGE);
@@ -299,7 +302,7 @@ public class InspectorView extends JPanel {
                 try {
                     if (parquimetros.getSelectedIndex() >= 0) {
                         registrarAcceso();
-                        verificarMultas();
+                        verificarPatentes();
                     } else
                         JOptionPane.showMessageDialog(new JFrame("Error"), "Primero debe seleccionar un parquimetro",
                                 "BD-2020", JOptionPane.ERROR_MESSAGE);
