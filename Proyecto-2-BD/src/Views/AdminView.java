@@ -118,7 +118,8 @@ public class AdminView extends JPanel {
                     }
                 }
             } catch(SQLException throwables){
-                throwables.printStackTrace();
+                JOptionPane.showMessageDialog(new JFrame("Informacion"), "Fallo al ejecutar la consulta",
+                        "BD-2020", JOptionPane.INFORMATION_MESSAGE);
             }
         }
         public void keyReleased(KeyEvent keyEvent) {}
