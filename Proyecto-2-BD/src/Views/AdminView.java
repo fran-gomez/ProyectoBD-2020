@@ -71,6 +71,7 @@ public class AdminView extends JPanel {
 
     private void ejecutarSentencia(String sent) {
         try {
+
             modelo.setSelectSql(sent.trim());
             modelo.createColumnModelFromQuery();
             // para que muestre correctamente los valores de tipo TIME (hora)
@@ -101,10 +102,25 @@ public class AdminView extends JPanel {
         public void keyTyped(KeyEvent keyEvent) {}
 
         public void keyPressed(KeyEvent keyEvent) {
-            if (keyEvent.getKeyChar() == '\n')
-                ejecutarSentencia(sentencias.getText());
-        }
+            try {
+                String consulta;
+                Statement s;
 
+                if (keyEvent.getKeyChar() == '\n') {
+                    consulta = sentencias.getText().split(" ")[0];
+                    if (consulta.equals("SELECT") || consulta.equals("select"))
+                        ejecutarSentencia(sentencias.getText());
+                    else {
+                        s = conexion.createStatement();
+                        s.execute(sentencias.getText().trim());
+
+                        s.close();
+                    }
+                }
+            } catch(SQLException throwables){
+                throwables.printStackTrace();
+            }
+        }
         public void keyReleased(KeyEvent keyEvent) {}
     }
 

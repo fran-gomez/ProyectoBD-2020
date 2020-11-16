@@ -164,7 +164,7 @@ public class LoginView extends JPanel {
     private boolean loginInspector(String uname, Connection conexion, String password) {
         try {
             Statement s = conexion.createStatement();
-            String sql = "SELECT legajo, password FROM inspectores WHERE legajo=" + uname;
+            String sql = "SELECT legajo, password FROM Inspectores WHERE legajo=" + uname;
             ResultSet rs = s.executeQuery(sql);
             String md5Passwd = "";
 

@@ -11,7 +11,10 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -115,7 +118,7 @@ public class InspectorView extends JPanel {
         int i = 0;
         String[] ubicaciones;
         Statement s = conexion.createStatement();
-        String sql = "SELECT calle, altura FROM ubicaciones";
+        String sql = "SELECT calle, altura FROM Ubicaciones";
         ResultSet rs = s.executeQuery(sql);
 
         ubicaciones = new String[20];
@@ -135,16 +138,17 @@ public class InspectorView extends JPanel {
                     "estacionados en su ubicacion", "BD-2020", JOptionPane.ERROR_MESSAGE);
         } else {
             Set<String> patentesValidas = new HashSet<>();
-            Set<String> patentesParquimetro = new HashSet<>();
-            Set<String> patentesInspector = new HashSet<>();
+            Set<String> patentesEnParquimetro = new HashSet<>();
+            Set<String> patentesIngresadas = new HashSet<>();
 
             String id_asociado_con;
 
             Statement s = conexion.createStatement();
             String id_parq = parquimetros.getSelectedValue();
             String sql = "SELECT patente FROM " +
-                    "(automoviles NATURAL JOIN tarjetas NATURAL JOIN estacionamientos NATURAL JOIN parquimetros) " +
-                    "WHERE id_parq=" + id_parq + " AND id_tarjeta=estacionamientos.id_tarjeta";
+                    "(tarjetas NATURAL JOIN Estacionamientos NATURAL JOIN Parquimetros) " +
+                    "WHERE id_parq=" + id_parq + " AND id_tarjeta=Estacionamientos.id_tarjeta " +
+                    "AND fecha_sal IS NULL AND hora_sal IS NULL";
             ResultSet rs = s.executeQuery(sql);
 
             // Si consideramos a las patentes cuya tarjeta esta asociada al parquimetro como un conjunto
@@ -157,14 +161,17 @@ public class InspectorView extends JPanel {
             // Finalmente, se intersectan los conjuntos de patentes validas con las patentes que no
             // pagaron en el parquimetro, para evitar el error de las patentes inexistentes en la bd
             patentesValidas.addAll(obtenerPatentesValidas());
+
             while (rs.next())
-                patentesParquimetro.add(rs.getString("patente"));
+                patentesEnParquimetro.add(rs.getString("patente"));
 
-            patentesInspector.addAll(Arrays.asList(patentesUbicacion.getText().split(",")));
-            patentesInspector.removeAll(patentesParquimetro);
+            for (String patente: patentesUbicacion.getText().split(","))
+                patentesIngresadas.add(patente.trim());
+            patentesIngresadas.removeAll(patentesEnParquimetro);
 
-            patentesInspector.retainAll(patentesValidas);
+            patentesIngresadas.retainAll(patentesValidas);
 
+            // Se verifica que el inspector este asociado a la ubicacion seleccionada
             String calle = ubicaciones.getSelectedValue().split(",")[0];
             String altura = ubicaciones.getSelectedValue().split(",")[1];
             id_asociado_con = obtenerIdAsocidadoCon(legajo, calle, altura);
@@ -174,7 +181,7 @@ public class InspectorView extends JPanel {
                             " no esta autorizado a labrar multas en " + ubicaciones.getSelectedValue(), "BD-2020", JOptionPane.ERROR_MESSAGE);
             else {
                 // Para cada patente en el conjunto diferencia, se labra una multa
-                for (String patente : patentesInspector)
+                for (String patente : patentesIngresadas)
                     labrarMulta(patente, id_asociado_con);
 
                 actualizarDTable(multasGeneradas);
@@ -189,7 +196,7 @@ public class InspectorView extends JPanel {
 
         Set<String> patentes;
         Statement s = conexion.createStatement();
-        String sql = "SELECT patente FROM automoviles";
+        String sql = "SELECT patente FROM Automoviles";
         ResultSet rs = s.executeQuery(sql);
 
         patentes = new HashSet<>();
@@ -205,7 +212,7 @@ public class InspectorView extends JPanel {
     private void actualizarDTable(DBTable multasGeneradas) throws SQLException {
         Statement s = conexion.createStatement();
         String sql = "SELECT numero, fecha, hora, calle, altura, patente, legajo FROM " +
-                        "(multa NATURAL JOIN asociado_con) WHERE fecha >= CURDATE() AND hora <= CURTIME() AND legajo=" +
+                        "(Multa NATURAL JOIN Asociado_con) WHERE fecha = CURDATE() AND hora = CURTIME() AND legajo=" +
                         legajo;
         ResultSet rs = s.executeQuery(sql);
 
@@ -229,7 +236,7 @@ public class InspectorView extends JPanel {
 
     private void labrarMulta(String patente, String id_asociado_con) throws SQLException {
         Statement s = conexion.createStatement();
-        String sql = "INSERT INTO multa(fecha,hora,patente,id_asociado_con) " +
+        String sql = "INSERT INTO Multa(fecha,hora,patente,id_asociado_con) " +
                 "VALUES (CURDATE(),CURTIME(),'" + patente + "'," +
                 id_asociado_con + ")";
         s.executeUpdate(sql);
@@ -240,8 +247,9 @@ public class InspectorView extends JPanel {
     private String obtenerIdAsocidadoCon(String legajo, String calle, String altura) throws SQLException {
         Statement s = conexion.createStatement();
         String sql = "SELECT id_asociado_con FROM " +
-                        "(asociado_con NATURAL JOIN inspectores NATURAL JOIN parquimetros) " +
-                        "WHERE legajo=" + legajo + " AND calle='" + calle + "' AND altura=" + altura;
+                        "(Asociado_con NATURAL JOIN Inspectores NATURAL JOIN Parquimetros) " +
+                        "WHERE legajo=" + legajo + " AND calle='" + calle + "' AND altura=" + altura +
+                        " AND dia='" + obtenerDia() + "' AND turno='" + obtenerTurno() + "'";
         ResultSet rs = s.executeQuery(sql);
         String id_asociado_con = "";
 
@@ -254,14 +262,51 @@ public class InspectorView extends JPanel {
         return id_asociado_con;
     }
 
+    private String obtenerTurno() throws SQLException {
+        String turno = "";
+
+        Statement s = conexion.createStatement();
+        String sql = "SELECT CURTIME() > \"08:00:00\" AND CURTIME() < \"13:59:59\"";
+        ResultSet rs = s.executeQuery(sql);
+
+        while (rs.next())
+            if (rs.getBoolean(1))
+                turno = "M";
+
+        if (turno.equals("")) {
+            rs = s.executeQuery("SELECT CURTIME() > \"14:00:00\" AND CURTIME() < \"20:00:00\"");
+            while (rs.next())
+                if (rs.getBoolean(1))
+                    turno = "T";
+        }
+
+        return turno;
+    }
+
+    private String obtenerDia() throws SQLException {
+
+        Statement s = conexion.createStatement();
+        String sql = "SELECT DAYOFWEEK(CURDATE())";
+        ResultSet rs = s.executeQuery(sql);
+        String[] dias = {"Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"};
+        String dia = "";
+
+        while (rs.next())
+            dia = dias[rs.getInt(1)-1];
+
+        s.close();
+        rs.close();
+
+        return dia;
+    }
+
     private void registrarAcceso() {
         try {
             Statement s = conexion.createStatement();
             String id_parq = parquimetros.getSelectedValue();
-            String sql = "INSERT INTO accede(legajo,id_parq,fecha,hora) " +
+            String sql = "INSERT INTO Accede(legajo,id_parq,fecha,hora) " +
                     "VALUES (" + legajo + "," + id_parq + ",CURDATE(),CURTIME())";
 
-            System.out.println(sql);
             s.executeUpdate(sql);
             s.close();
 
@@ -326,7 +371,7 @@ public class InspectorView extends JPanel {
                 String tabla = ubicaciones.getSelectedValue();
                 String[] camposTabla;
                 Statement s = conexion.createStatement();
-                ResultSet rs = s.executeQuery("SELECT id_parq FROM (ubicaciones NATURAL JOIN parquimetros) " +
+                ResultSet rs = s.executeQuery("SELECT id_parq FROM (Ubicaciones NATURAL JOIN Parquimetros) " +
                                                         "WHERE calle='" + tabla.split(",")[0] + "' and altura='" + tabla.split(",")[1] + "'");
 
                 camposTabla = new String[21];
