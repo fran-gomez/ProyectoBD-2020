@@ -91,6 +91,18 @@ CREATE TABLE Parquimetros (
     ON DELETE cascade ON UPDATE cascade
 ) ENGINE = InnoDB;
 
+CREATE TABLE Ventas (
+    id_tarjeta INT UNSIGNED NOT NULL,
+    tipo_tarjeta VARCHAR(30) NOT NULL,
+    saldo DECIMAL(5, 2) NOT NULL,
+    fecha DATE NOT NULL,
+    hora TIME NOT NULL
+
+    # No le puse claves ni nada similar ya que es una
+    # tabla que solo almacena informacion, no se dice
+    # nada respecto a los accesos
+) ENGINE = InnoDB;
+
 # Relaciones 
 
 CREATE TABLE Estacionamientos (
@@ -219,3 +231,116 @@ GRANT SELECT ON parquimetros.Estacionamientos TO inspector@'%';
 GRANT SELECT, INSERT ON parquimetros.Multa TO inspector@'%';
 GRANT SELECT, UPDATE, INSERT ON parquimetros.Parquimetros TO inspector@'%';
 GRANT INSERT ON parquimetros.Accede TO inspector@'%';
+
+DELIMITER !
+CREATE PROCEDURE conectar(IN id_tarjeta INTEGER, IN id_parquimetro INTEGER)
+STORED_P:BEGIN
+    DECLARE fecha_salida DATE;
+    DECLARE hora_salida TIME;
+
+    # Se verifica que el id de tarjeta y parquimetro sean validos
+    # caso contrario, se produce un error
+    IF (NOT EXISTS(SELECT id_parq FROM (Parquimetros) WHERE id_parq=id_parquimetro)) THEN
+        SELECT 'Error' AS Operacion, id_parquimetro;
+        LEAVE STORED_P;
+    END IF;
+
+    IF (NOT EXISTS(SELECT tarjetas.id_tarjeta FROM (tarjetas) WHERE tarjetas.id_tarjeta=id_tarjeta)) THEN
+        SELECT 'Error' AS Operacion, id_tarjeta;
+        LEAVE STORED_P;
+    END IF;
+
+    IF (NOT EXISTS(SELECT Estacionamientos.id_tarjeta FROM (Estacionamientos)
+                    WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta)) THEN
+        CALL realizar_apertura(id_tarjeta, id_parquimetro);
+        LEAVE STORED_P;
+    END IF;
+
+    # Se verifica por cierre de parquimetro
+    SELECT fecha_sal, hora_sal INTO fecha_salida, hora_salida FROM (Parquimetros NATURAL JOIN Estacionamientos)
+        WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
+    
+    IF (fecha_salida IS NULL AND hora_salida IS NULL) THEN
+        CALL realizar_cierre(id_tarjeta, id_parquimetro);
+        LEAVE STORED_P;
+    ELSE
+        SELECT 'Mostrar' AS Operacion, id_tarjeta, fecha_salida AS Fecha_de_cierre, hora_salida AS Hora_de_cierre;
+        LEAVE STORED_P;
+    END IF;
+END; !
+
+CREATE PROCEDURE realizar_cierre(IN id_tarjeta INTEGER, IN id_parquimetro INTEGER)
+BEGIN
+    DECLARE fecha_entrada, fecha_salida DATE;
+    DECLARE hora_entrada, hora_salida TIME;
+    DECLARE saldo_actual, nuevo_saldo, tiempo INTEGER;
+    DECLARE tarifa DECIMAL(5, 2);
+    DECLARE descuento DECIMAL(3, 2);
+
+    SELECT saldo INTO saldo_actual FROM (tarjetas)
+        WHERE tarjetas.id_tarjeta=id_tarjeta;
+    SELECT Ubicaciones.tarifa INTO tarifa FROM (Parquimetros NATURAL JOIN Ubicaciones)
+        WHERE id_parq=id_parquimetro;
+    SELECT tipos_tarjeta.descuento INTO descuento FROM (tarjetas NATURAL JOIN tipos_tarjeta)
+        WHERE tarjetas.id_tarjeta=id_tarjeta;
+        
+    SELECT fecha_ent, hora_ent INTO fecha_entrada, hora_entrada FROM (Parquimetros NATURAL JOIN Estacionamientos)
+        WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
+    SELECT CURDATE() INTO fecha_salida;
+    SELECT CURTIME() INTO hora_salida;
+    SELECT TIME_TO_SEC(TIMEDIFF(TIMESTAMP(fecha_salida, hora_salida),
+                                TIMESTAMP(fecha_entrada, hora_entrada)))/60 INTO tiempo;
+
+    SET nuevo_saldo = saldo_actual - (tiempo * tarifa * (1-descuento));
+    UPDATE tarjetas SET
+        saldo = nuevo_saldo
+        WHERE tarjetas.id_tarjeta=id_tarjeta;
+    UPDATE (Parquimetros NATURAL JOIN Estacionamientos) SET
+        Estacionamientos.fecha_sal = fecha_salida,
+        Estacionamientos.hora_sal = hora_salida
+        WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
+
+    SELECT 'Cierre' AS Operacion, tiempo AS Duracion, nuevo_saldo AS Saldo;
+END; !
+
+CREATE PROCEDURE realizar_apertura(IN id_tarjeta INTEGER, IN id_parquimetro INTEGER)
+BEGIN
+    DECLARE tipo_tarjeta VARCHAR(30);
+    DECLARE saldo_actual INTEGER;
+    DECLARE tarifa DECIMAL(5, 2);
+    DECLARE descuento DECIMAL(3, 2);
+
+    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=id_tarjeta;
+    IF saldo_actual < 0 THEN
+        SELECT 'Error' AS Operacion, saldo_actual AS Saldo;
+    ELSE
+        INSERT INTO Estacionamientos(id_tarjeta,id_parq,fecha_ent,hora_ent,fecha_sal,hora_sal)
+        VALUES(id_tarjeta,id_parquimetro,CURDATE(),CURTIME(),NULL,NULL);
+
+        SELECT Ubicaciones.tarifa INTO tarifa FROM (Parquimetros NATURAL JOIN Ubicaciones)
+            WHERE id_parq=id_parquimetro;
+        SELECT tipos_tarjeta.descuento INTO descuento FROM (tarjetas NATURAL JOIN tipos_tarjeta)
+            WHERE tarjetas.id_tarjeta=id_tarjeta;
+
+        SELECT 'Apertura' AS Operacion, saldo_actual/(tarifa*(1-descuento)) AS Tiempo_disponible;
+    END IF;
+END; !
+
+CREATE TRIGGER registrar_venta AFTER INSERT ON Estacionamientos
+FOR EACH ROW
+BEGIN
+    DECLARE tipo_tarjeta VARCHAR(30);
+    DECLARE saldo_actual INTEGER;
+
+    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=NEW.id_tarjeta;
+    SELECT tipo INTO tipo_tarjeta FROM tarjetas WHERE tarjetas.id_tarjeta=NEW.id_tarjeta;
+    
+    INSERT INTO Ventas(id_tarjeta,tipo_tarjeta,saldo,fecha,hora)
+    VALUES(NEW.id_tarjeta,tipo_tarjeta,saldo_actual,CURDATE(),CURTIME());
+END; !
+DELIMITER ;
+
+DROP USER parquimetro;
+FLUSH PRIVILEGES;
+CREATE USER parquimetro@'%' IDENTIFIED BY 'parq';
+GRANT EXECUTE ON PROCEDURE parquimetros.conectar TO parquimetro;
