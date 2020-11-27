@@ -127,7 +127,7 @@ public class ParquimetroView extends JPanel {
 
                 String sql = "CALL conectar(" + tarjeta + "," + parquimetro + ")";
                 CallableStatement s = conexion.prepareCall(sql);
-                s.executeUpdate(sql);
+                ResultSet rs = s.executeQuery(sql);
 
                 s.close();
             } catch (SQLException e) {
