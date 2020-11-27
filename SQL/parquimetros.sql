@@ -250,6 +250,7 @@ STORED_P:BEGIN
         LEAVE STORED_P;
     END IF;
 
+    
     IF (NOT EXISTS(SELECT Estacionamientos.id_tarjeta FROM (Estacionamientos)
                     WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta)) THEN
         CALL realizar_apertura(id_tarjeta, id_parquimetro);
@@ -259,12 +260,8 @@ STORED_P:BEGIN
     # Se verifica por cierre de parquimetro
     SELECT fecha_sal, hora_sal INTO fecha_salida, hora_salida FROM (Parquimetros NATURAL JOIN Estacionamientos)
         WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
-    
     IF (fecha_salida IS NULL AND hora_salida IS NULL) THEN
         CALL realizar_cierre(id_tarjeta, id_parquimetro);
-        LEAVE STORED_P;
-    ELSE
-        SELECT 'Mostrar' AS Operacion, id_tarjeta, fecha_salida AS Fecha_de_cierre, hora_salida AS Hora_de_cierre;
         LEAVE STORED_P;
     END IF;
 END; !
@@ -344,3 +341,9 @@ DROP USER parquimetro;
 FLUSH PRIVILEGES;
 CREATE USER parquimetro@'%' IDENTIFIED BY 'parq';
 GRANT EXECUTE ON PROCEDURE parquimetros.conectar TO parquimetro;
+GRANT SELECT ON Ubicaciones TO parquimetro;
+GRANT SELECT ON tarjetas TO parquimetro;
+GRANT SELECT ON Parquimetros TO parquimetro;
+GRANT SELECT ON tipos_tarjeta TO parquimetro;
+GRANT SELECT, INSERT ON Estacionamientos TO parquimetro;
+GRANT INSERT ON Ventas to parquimetro;

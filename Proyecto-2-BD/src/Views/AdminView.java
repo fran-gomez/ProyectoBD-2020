@@ -37,7 +37,7 @@ public class AdminView extends JPanel {
 
             sentencias.addKeyListener(new EnterListener());
             sentencias.setBorder(new LineBorder(Color.BLACK));
-            tablas.addListSelectionListener(new SeleccionListener(this));
+            tablas.addListSelectionListener(new SeleccionListener());
 
             this.setLayout(new BorderLayout());
             ((BorderLayout) this.getLayout()).setHgap(3);
@@ -126,11 +126,6 @@ public class AdminView extends JPanel {
     }
 
     private class SeleccionListener implements ListSelectionListener {
-        protected JPanel panel;
-
-        public SeleccionListener(AdminView adminView) {
-            panel = adminView;
-        }
 
         @Override
         public void valueChanged(ListSelectionEvent listSelectionEvent) {

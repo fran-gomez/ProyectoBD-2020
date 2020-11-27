@@ -148,7 +148,12 @@ public class LoginView extends JPanel {
                 }
                 else
                     throw new SQLException();
-            } else {
+            } else if (uname.equals("parquimetro")) {
+                conexion = DriverManager.getConnection(url, uname, psswd);
+                if (conexion != null)
+                    new ParquimetroView(ventana, conexion);
+                    cleanView();
+            }else {
                 JOptionPane.showMessageDialog(new JFrame("Error"), "No se encontraron usuarios o inspectores");
                 resetFields();
             }
