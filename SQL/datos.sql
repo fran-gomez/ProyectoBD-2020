@@ -10,6 +10,7 @@ DELETE FROM Estacionamientos;
 DELETE FROM Parquimetros;
 DELETE FROM Ubicaciones;
 DELETE FROM Inspectores;
+DELETE FROM Ventas;
 DELETE FROM tarjetas;
 DELETE FROM tipos_tarjeta;
 DELETE FROM Automoviles;
@@ -176,7 +177,7 @@ VALUES (5,401,CURDATE(),CURTIME(),NULL,NULL);
 
 #La tarjeta 12 (auto con patente AAA112) ingreso en el parquimetro de alem  401 ayer (se lo olvido abierto) 
 INSERT INTO Estacionamientos(id_tarjeta,id_parq,fecha_ent,hora_ent,fecha_sal,hora_sal) 
-VALUES (12,401,date_sub(curdate() , interval 1 day),'11:0:00',NULL,NULL);
+VALUES (12,401,date_sub(curdate() , interval 1 day),'08:0:00',NULL,NULL);
 
 
 #-------------------------Asociado_con----------------------------------#
@@ -267,36 +268,36 @@ VALUES (72,7,'Mitre',100,'Do','T');
 
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA111',11);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA111',11);
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA111',31);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA111',31);
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA111',51);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA111',51);
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA111',71);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA111',71);
 
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA222',21);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA222',21);
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA222',41);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA222',41);
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA222',61);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA222',61);
 
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA333',31);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA333',31);
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA444',41);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA444',41);
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA555',51);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA555',51);
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA666',61);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA666',61);
 
 INSERT INTO Multa(fecha,hora,patente,id_asociado_con) 
-VALUES (curdate()-1,'18:10:35','AAA777',71);
+VALUES (date_sub(curdate() , interval 1 day),'18:10:35','AAA777',71);
 
 #--------------------------------------------------------------------#

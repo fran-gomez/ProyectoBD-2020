@@ -135,17 +135,19 @@ public class InspectorView extends JPanel {
                     "estacionados en su ubicacion", "BD-2020", JOptionPane.ERROR_MESSAGE);
         } else {
             Set<String> patentesValidas = new HashSet<>();
-            Set<String> patentesEnParquimetro = new HashSet<>();
+            Set<String> patentesEnUbicacion = new HashSet<>();
             Set<String> patentesIngresadas = new HashSet<>();
 
             String id_asociado_con;
 
             Statement s = conexion.createStatement();
-            String id_parq = parquimetros.getSelectedValue();
+            //String id_parq = parquimetros.getSelectedValue();
+            String calle = ubicaciones.getSelectedValue().split(",")[0].trim();
+            String altura = ubicaciones.getSelectedValue().split(",")[1].trim();
             String sql = "SELECT patente FROM " +
                     "(tarjetas NATURAL JOIN Estacionamientos NATURAL JOIN Parquimetros) " +
-                    "WHERE id_parq=" + id_parq + " AND id_tarjeta=Estacionamientos.id_tarjeta " +
-                    "AND fecha_sal IS NULL AND hora_sal IS NULL";
+                    "WHERE calle='" + calle + "' AND altura=" + altura +
+                    " AND fecha_sal IS NULL AND hora_sal IS NULL";
             ResultSet rs = s.executeQuery(sql);
 
             // Si consideramos a las patentes cuya tarjeta esta asociada al parquimetro como un conjunto
@@ -160,17 +162,15 @@ public class InspectorView extends JPanel {
             patentesValidas.addAll(obtenerPatentesValidas());
 
             while (rs.next())
-                patentesEnParquimetro.add(rs.getString("patente"));
+                patentesEnUbicacion.add(rs.getString("patente"));
 
             for (String patente: patentesUbicacion.getText().split(","))
                 patentesIngresadas.add(patente.trim());
-            patentesIngresadas.removeAll(patentesEnParquimetro);
+            patentesIngresadas.removeAll(patentesEnUbicacion);
 
             patentesIngresadas.retainAll(patentesValidas);
 
             // Se verifica que el inspector este asociado a la ubicacion seleccionada
-            String calle = ubicaciones.getSelectedValue().split(",")[0];
-            String altura = ubicaciones.getSelectedValue().split(",")[1];
             id_asociado_con = obtenerIdAsocidadoCon(legajo, calle, altura);
 
             if (id_asociado_con.equals(""))

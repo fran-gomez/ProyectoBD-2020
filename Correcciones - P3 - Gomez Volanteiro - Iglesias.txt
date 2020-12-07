@@ -1,0 +1,35 @@
+Comisión Gomez Volonterio - Iglesias
+------------------------------------
+
+Correcciones Proyecto 2:
+Inspector:
+- Labrar multas: Ok
+
+- Interfaz:
+No se corrigio lo siguiente: Ok
+
+Correcciones Proyecto 3:  
+Store Procedure:
+- Controlar parametros de entrada: Ok
+
+- Codigo dentro de START TRANSACTION-COMMIT: Ok
+
+- Uso de bloqueo exclusivo para saldo tarjeta y estacionamiento correspondiente:
+	- No se realizaron los bloqueos exclusivos (SELECT FOR UPDATE) para estacionamiento. Corregir. 
+
+- No usar bloqueos exclusivos innecesarios: Ok
+
+- Captura de excepciones y rollback: Ok (Creo)
+
+- Funcionamiento: 
+	- No funciona correctamemte el cierre de un estacionamiento cuando se hace el mismo en una ubicacion distinta a la apertura.
+	Se realiza una nueva apertura.
+
+Aplicacion:
+	- No se muestra el mensaje correspondiente cuando se realiza una conexion al parquimetro. Corregir para que muestre si ha sido
+	un cierre o apertura con exito, y el dato correspondiente (minutos o saldo disponibles).
+	- Con nustros datos intenten probar lo siguiente:
+	Seleccionar Alem al 400 - Parquimetro 401 - tarjeta 7
+	Deberian realizar un cierre, y su aplicacion realiza una apertura.
+	Deben considerar que el cierre puede ser en una ubicacion distinta a la utilzada en la apertura.
+	(tengan cuidado de siempre calcular las tarifas con la ubicacion de apertura)

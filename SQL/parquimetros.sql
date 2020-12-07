@@ -237,6 +237,14 @@ CREATE PROCEDURE conectar(IN id_tarjeta INTEGER, IN id_parquimetro INTEGER)
 STORED_P:BEGIN
     DECLARE fecha_salida DATE;
     DECLARE hora_salida TIME;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SELECT 'SQLEXCEPTION!, transacción abortada' AS Operacion;
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
 
     # Se verifica que el id de tarjeta y parquimetro sean validos
     # caso contrario, se produce un error
@@ -250,19 +258,18 @@ STORED_P:BEGIN
         LEAVE STORED_P;
     END IF;
 
-    # Se verifica por cierre o apertura de parquimetro
-    SELECT fecha_sal, hora_sal INTO fecha_salida, hora_salida FROM (Parquimetros NATURAL JOIN Estacionamientos)
-        WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
-    IF (NOT EXISTS(SELECT Estacionamientos.id_tarjeta from Estacionamientos WHERE Estacionamientos.id_tarjeta=id_tarjeta AND id_parq=id_parquimetro)) THEN
-        CALL realizar_apertura(id_tarjeta, id_parquimetro);
-        LEAVE STORED_P;
-    ELSEIF (fecha_salida IS NOT NULL AND hora_salida IS NOT NULL) THEN
-        CALL realizar_apertura(id_tarjeta, id_parquimetro);
-        LEAVE STORED_P;
-    ELSEIF (fecha_salida IS NULL AND hora_salida IS NULL) THEN
+    # Si existe un estacionamiento abierto, se realiza el cierre
+    # caso contrario, estamos frente a una apertura
+    IF (EXISTS(SELECT * FROM Estacionamientos
+            WHERE Estacionamientos.id_tarjeta=id_tarjeta AND fecha_ent IS NOT NULL AND hora_ent IS NOT NULL AND fecha_sal IS NULL AND hora_sal IS NULL)) THEN
         CALL realizar_cierre(id_tarjeta, id_parquimetro);
         LEAVE STORED_P;
+    ELSE
+        CALL realizar_apertura(id_tarjeta, id_parquimetro);
+        LEAVE STORED_P;
     END IF;
+    
+    COMMIT;
 END; !
 
 CREATE PROCEDURE realizar_apertura(IN id_tarjeta INTEGER, IN id_parquimetro INTEGER)
@@ -272,7 +279,7 @@ BEGIN
     DECLARE tarifa DECIMAL(5, 2);
     DECLARE descuento DECIMAL(3, 2);
 
-    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=id_tarjeta;
+    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=id_tarjeta FOR UPDATE;
     IF saldo_actual < 0 THEN
         SELECT 'Error' AS Operacion, saldo_actual AS Saldo;
     ELSE
@@ -296,29 +303,31 @@ BEGIN
     DECLARE tarifa DECIMAL(5, 2);
     DECLARE descuento DECIMAL(3, 2);
 
-    SELECT saldo INTO saldo_actual FROM (tarjetas)
-        WHERE tarjetas.id_tarjeta=id_tarjeta;
-    SELECT Ubicaciones.tarifa INTO tarifa FROM (Parquimetros NATURAL JOIN Ubicaciones)
-        WHERE id_parq=id_parquimetro;
+    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=id_tarjeta FOR UPDATE;
+    SELECT Ubicaciones.tarifa INTO tarifa FROM (Estacionamientos NATURAL JOIN Parquimetros NATURAL JOIN Ubicaciones)
+        WHERE Estacionamientos.id_tarjeta=id_tarjeta AND fecha_sal IS NULL AND hora_sal IS NULL;
     SELECT tipos_tarjeta.descuento INTO descuento FROM (tarjetas NATURAL JOIN tipos_tarjeta)
         WHERE tarjetas.id_tarjeta=id_tarjeta;
-        
+
     SELECT fecha_ent, hora_ent INTO fecha_entrada, hora_entrada FROM (Parquimetros NATURAL JOIN Estacionamientos)
-        WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
+        WHERE Estacionamientos.id_tarjeta=id_tarjeta AND fecha_sal IS NULL AND hora_sal IS NULL;
     SELECT CURDATE() INTO fecha_salida;
     SELECT CURTIME() INTO hora_salida;
     SELECT TIME_TO_SEC(TIMEDIFF(TIMESTAMP(fecha_salida, hora_salida),
                                 TIMESTAMP(fecha_entrada, hora_entrada)))/60 INTO tiempo;
 
     SET nuevo_saldo = saldo_actual - (tiempo * tarifa * (1-descuento));
+    IF (nuevo_saldo < -999.99) THEN
+        set nuevo_saldo = -999;
+    END IF;
+    SELECT nuevo_saldo, saldo_actual, tiempo, tarifa, descuento;
     UPDATE tarjetas SET
         saldo = nuevo_saldo
         WHERE tarjetas.id_tarjeta=id_tarjeta;
-    UPDATE (Parquimetros NATURAL JOIN Estacionamientos) SET
+    UPDATE Estacionamientos SET
         Estacionamientos.fecha_sal = fecha_salida,
         Estacionamientos.hora_sal = hora_salida
-        WHERE id_parq=id_parquimetro AND Estacionamientos.id_tarjeta=id_tarjeta;
-
+        WHERE Estacionamientos.id_tarjeta=id_tarjeta;
     SELECT 'Cierre' AS Operacion, tiempo AS Duracion, nuevo_saldo AS Saldo;
 END; !
 
@@ -328,7 +337,7 @@ BEGIN
     DECLARE tipo_tarjeta VARCHAR(30);
     DECLARE saldo_actual INTEGER;
 
-    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=NEW.id_tarjeta;
+    SELECT saldo INTO saldo_actual FROM tarjetas WHERE tarjetas.id_tarjeta=NEW.id_tarjeta FOR UPDATE;
     SELECT tipo INTO tipo_tarjeta FROM tarjetas WHERE tarjetas.id_tarjeta=NEW.id_tarjeta;
     
     INSERT INTO Ventas(id_tarjeta,tipo_tarjeta,saldo,fecha,hora)
